@@ -1,0 +1,509 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>우리은하의 구조를 파악하기 위한 별의 거리 구하기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: 검은 하늘 위 관측 노트 — 왼쪽 그래프, 오른쪽 계산 패널. 별 색(B−V)이 유일한 장식. */
+:root{
+  --bg:#05060a; --panel:rgba(13,16,24,.86); --panel-2:#121723; --field:#080a10;
+  --line:#232a3a; --grid:#151a26;
+  --fg:#e9ebf1; --muted:#8e94a6; --dim:#5b6276;
+  --warm:#ffb866; --on-warm:#1c1307; --cool:#8db8ff; --ok:#6fdaa8; --bad:#ff8080;
+  --f-display:"Space Grotesk","IBM Plex Sans KR",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-body);font-size:14px;line-height:1.55}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding-block:22px 56px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:18px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;gap:2px}
+h1{font-family:var(--f-display);font-weight:600;font-size:24px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.sub{font-size:13px;color:var(--muted)}
+.badge{font-size:10.5px;padding:1px 7px;border-radius:999px;background:rgba(255,128,128,.16);color:var(--bad);margin-left:4px}
+.btn.on{border-color:var(--warm);color:var(--warm)}
+output.snap{color:var(--ok)}
+.seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.seg button{all:unset;cursor:pointer;padding:6px 14px;border-radius:999px;font-size:13px;color:var(--muted);transition:background .2s,color .2s}
+.seg button.on{background:var(--fg);color:var(--bg)}
+.seg button:disabled{opacity:.38;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--line)}
+.tabs button{all:unset;cursor:pointer;padding:10px 0;font-family:var(--f-display);font-size:15px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s}
+.tabs button.on{color:var(--fg);border-color:var(--warm)}
+.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+.grid.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:880px){.grid,.grid.even{grid-template-columns:minmax(0,1fr)}}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:50;pointer-events:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0;backdrop-filter:blur(6px)}
+.head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tip{font-size:12px;color:var(--dim)}
+canvas.plot{width:100%;display:block;max-width:100%}
+#hr{aspect-ratio:1/.9;touch-action:none;cursor:ns-resize}
+#pl{aspect-ratio:1/.9;cursor:crosshair}
+#lc{aspect-ratio:16/9;cursor:crosshair}
+.shift{display:flex;align-items:center;gap:12px}
+.shift label{font-size:13px;color:var(--muted);white-space:nowrap}
+input[type=range]{flex:1;min-width:0;accent-color:var(--warm)}
+output{flex:none;white-space:nowrap;font-family:var(--f-mono);font-size:13px;color:var(--warm);min-width:88px;text-align:right;transition:color .2s}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.picks{display:flex;gap:8px;flex-wrap:wrap}
+.pick{all:unset;box-sizing:border-box;cursor:pointer;flex:1;min-width:84px;text-align:center;padding:10px 8px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);font-family:var(--f-display);font-size:14px;transition:border-color .2s,color .2s}
+.pick:hover{border-color:var(--dim)}
+.pick.on{border-color:var(--warm);color:var(--warm)}
+.pick small{display:block;font-family:var(--f-mono);font-size:10.5px;color:var(--dim);margin-top:2px}
+.pick small.done{color:var(--ok)}
+.formula{font-family:var(--f-mono);font-size:12.5px;padding:8px 10px;border-radius:8px;background:var(--panel-2);border:1px dashed var(--line);display:flex;flex-direction:column;gap:2px}
+.fields{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 96px 30px 18px;align-items:center;gap:8px}
+.row label{font-size:13px;color:var(--muted)}
+.row input{all:unset;box-sizing:border-box;width:100%;font-family:var(--f-mono);font-size:14px;padding:7px 9px;border-radius:8px;background:var(--field);border:1px solid var(--line);text-align:right;color:var(--fg)}
+.row input:disabled{opacity:.4}
+.row .unit{font-size:12px;color:var(--dim)}
+.row .st{font-family:var(--f-mono);font-weight:600;text-align:center}
+.st.ok{color:var(--ok)} .st.no{color:var(--bad)}
+.row .ans{grid-column:2/-1;font-family:var(--f-mono);font-size:11.5px;color:var(--warm);text-align:right;margin-top:-5px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{all:unset;cursor:pointer;padding:8px 16px;border-radius:999px;font-size:13px;border:1px solid var(--line);color:var(--fg);transition:border-color .2s}
+.btn:hover{border-color:var(--dim)}
+.btn.primary{background:var(--warm);color:var(--on-warm);border-color:var(--warm);font-weight:600}
+.msg{font-size:13px;min-height:1.4em;color:var(--muted);margin:0}
+.msg.ok{color:var(--ok)} .msg.no{color:var(--bad)}
+.hints{margin:0;padding:10px 12px 10px 28px;border-radius:8px;background:var(--panel-2);font-size:13px;display:flex;flex-direction:column;gap:3px}
+.answer{border:1px solid rgba(255,184,102,.35);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.answer .tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;color:var(--warm)}
+.answer ol{margin:0;padding-left:18px;font-family:var(--f-mono);font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.lc-head{display:flex;align-items:center;gap:10px}
+#glyph{width:40px;height:40px;flex:none}
+.live{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pill{font-family:var(--f-mono);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+body.teacher .student-only{display:none!important}
+body:not(.teacher) .teacher-only{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<canvas id="sky" aria-hidden="true"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>우리은하의 구조를 파악하기 위한 별의 거리 구하기</h1>
+      <span class="sub">성단과 변광성까지의 거리를 재면 우리은하의 크기와 모양이 보여요.</span>
+    </div>
+    <span class="pill teacher-only">교사용 · 정답 표시</span>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="ms" class="on">주계열 맞추기</button>
+    <button data-tab="ceph">세페이드 변광성</button>
+  </nav>
+
+  <!-- 주계열 맞추기 -->
+  <section id="ms" class="grid">
+    <div class="card">
+      <div class="head"><span class="eyebrow">H–R도</span><span class="tip">그래프를 위로 끌어 올리세요</span></div>
+      <canvas id="hr" class="plot"></canvas>
+      <div class="shift">
+        <label for="shift">성단 이동</label>
+        <input type="range" id="shift" min="0" max="12" step="0.1" value="0" disabled>
+        <output id="shiftOut">0.0 등급</output>
+      </div>
+      <span class="tip">성단을 위로 옮겨 표준 주계열에 겹치면, 옮긴 양이 표준 주계열과의 등급 차이(m − M)예요.</span>
+    </div>
+    <aside class="side">
+      <div class="picks" id="clPicks"></div>
+      <div class="card">
+        <div class="fields" id="msFields"></div>
+        <div class="actions">
+          <button class="btn primary" id="msCheck">확인</button>
+          <button class="btn" id="msFx">거리지수 식 보기</button>
+          <button class="btn student-only" id="msHint">힌트</button>
+          <button class="btn teacher-only" id="msAuto">자동 맞추기</button>
+        </div>
+        <div class="formula" id="msFormula" hidden><span>m − M = 5 log d − 5</span><span class="tip">m 겉보기등급 · M 절대등급 · d 거리(pc)</span></div>
+        <p class="msg" id="msMsg" aria-live="polite"></p>
+        <ul class="hints student-only" id="msHints" hidden>
+          <li>성단을 끌어올려 표준 주계열에 겹치세요.</li>
+          <li>위로 벗어난 거성 말고 주계열에 맞추세요.</li>
+          <li>옮긴 양 = m − M</li>
+          <li>10<sup>0.3</sup> ≈ 2 (log 2 ≈ 0.3)</li>
+        </ul>
+        <div class="answer teacher-only" id="msAnswer"></div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 세페이드 -->
+  <section id="ceph" class="grid even" hidden>
+    <aside class="side">
+      <div class="picks" id="cePicks"></div>
+      <div class="card">
+        <div class="head">
+          <span class="eyebrow">밝기 변화</span>
+          <div class="lc-head"><span class="live" id="live"></span><canvas id="glyph"></canvas></div>
+        </div>
+        <canvas id="lc" class="plot"></canvas>
+      </div>
+      <div class="card">
+        <div class="fields" id="ceFields"></div>
+        <div class="actions">
+          <button class="btn primary" id="ceCheck">확인</button>
+          <button class="btn" id="ceFx">식 보기</button>
+          <button class="btn student-only" id="ceHint">힌트</button>
+        </div>
+        <div class="formula" id="ceFormula" hidden></div>
+        <p class="msg" id="ceMsg" aria-live="polite"></p>
+        <ul class="hints student-only" id="ceHints" hidden></ul>
+        <div class="answer teacher-only" id="ceAnswer"></div>
+      </div>
+    </aside>
+    <div class="card">
+      <div class="head">
+        <span class="eyebrow">주기–광도 관계</span>
+        <div class="seg" id="stageSeg">
+          <button data-stage="1" class="on">1단계 · 절대등급</button>
+          <button data-stage="2" id="stage2Btn">2단계 · 광도 <span class="badge">어려움</span></button>
+        </div>
+      </div>
+      <canvas id="pl" class="plot"></canvas>
+      <span class="tip">구한 주기를 그래프에 대 보세요. 커서를 올리면 값이 보여요.</span>
+    </div>
+  </section>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const cs=getComputedStyle(document.documentElement);
+const T=k=>cs.getPropertyValue(k).trim();
+const K={fg:T('--fg'),muted:T('--muted'),dim:T('--dim'),grid:T('--grid'),line:T('--line'),warm:T('--warm'),cool:T('--cool'),ok:T('--ok'),bad:T('--bad'),bg:T('--bg')};
+const MONO='"JetBrains Mono", ui-monospace, monospace', BODY='"IBM Plex Sans KR", system-ui, sans-serif';
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const minus=s=>String(s).replace(/-/g,'−');
+const f1=x=>minus((Math.round(x*10)/10).toFixed(1));
+const fN=x=>minus(Math.round(x).toLocaleString('en-US'));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+function rng(s){return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}}
+function gauss(r){return Math.sqrt(-2*Math.log(r()+1e-9))*Math.cos(2*Math.PI*r())}
+function interp(t,x){if(x<=t[0][0])return t[0][1];for(let i=1;i<t.length;i++)if(x<=t[i][0])return lerp(t[i-1][1],t[i][1],(x-t[i-1][0])/(t[i][0]-t[i-1][0]));return t[t.length-1][1]}
+const backOut=k=>{const c1=1.70158,c3=c1+1;return Math.max(0,1+c3*Math.pow(k-1,3)+c1*Math.pow(k-1,2))};
+const ease=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+
+/* 표준 주계열 (B−V, M) */
+const ZAMS=[[-0.33,-5.0],[-0.30,-3.6],[-0.25,-2.4],[-0.20,-1.6],[-0.15,-0.9],[-0.10,-0.3],[0,0.8],[0.1,1.5],[0.2,2.1],[0.3,2.7],[0.4,3.2],[0.5,3.9],[0.6,4.5],[0.65,4.8],[0.7,5.1],[0.8,5.7],[0.9,6.2],[1.0,6.7],[1.1,7.2],[1.2,7.7],[1.3,8.3],[1.4,8.9],[1.5,10.0],[1.6,11.6],[1.7,13.0],[1.8,14.2]];
+const Mz=bv=>interp(ZAMS,bv);
+const BVC=[[-0.4,[155,178,255]],[0,[202,216,255]],[0.35,[240,240,255]],[0.65,[255,244,232]],[1.0,[255,214,165]],[1.4,[255,186,112]],[2.0,[255,150,80]]];
+function bvColor(bv,a=1){let i=1;while(i<BVC.length-1&&bv>BVC[i][0])i++;const p=BVC[i-1],q=BVC[i];const t=clamp((bv-p[0])/(q[0]-p[0]),0,1);return `rgba(${p[1].map((v,k)=>Math.round(lerp(v,q[1][k],t)))},${a})`}
+function bvGrad(ctx,x0,x1){const g=ctx.createLinearGradient(x0,0,x1,0);for(let b=-0.4;b<=2.001;b+=0.2)g.addColorStop(clamp((b+0.4)/2.4,0,1),bvColor(b,.95));return g}
+
+function fit(cv){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;const W=Math.max(1,Math.round(r.width*d)),H=Math.max(1,Math.round(r.height*d));if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return{ctx,w:r.width,h:r.height}}
+function line(ctx,a,b,c,d){ctx.beginPath();ctx.moveTo(a,b);ctx.lineTo(c,d);ctx.stroke()}
+function dot(ctx,x,y,r){ctx.beginPath();ctx.arc(x,y,Math.max(0,r),0,Math.PI*2);ctx.fill()}
+function txt(ctx,s,x,y,col,al='left',bl='alphabetic',font){ctx.fillStyle=col;ctx.textAlign=al;ctx.textBaseline=bl;ctx.font=font||`11px ${MONO}`;ctx.fillText(s,x,y)}
+function vtitle(ctx,s,x,y,col){ctx.save();ctx.translate(x,y);ctx.rotate(-Math.PI/2);txt(ctx,s,0,0,col,'center','middle',`12px ${BODY}`);ctx.restore()}
+
+/* ---------- 데이터 ---------- */
+const CLUSTERS=[
+  {id:'A',name:'성단 A',tag:'젊은 성단',mu:5,d:100,seed:7,gen:'young'},
+  {id:'B',name:'성단 B',tag:'중년 성단',mu:6.5,d:200,seed:21,gen:'mid'},
+  {id:'C',name:'성단 C',tag:'늙은 성단',mu:10,d:1000,seed:42,gen:'old'}];
+function genCluster(c){
+  const r=rng(c.seed),s=[];
+  const ms=(lo,hi,n,bend)=>{for(let i=0;i<n;i++){const bv=lo+(hi-lo)*Math.pow(r(),.75);let M=Mz(bv)+gauss(r)*.13;if(bend&&bv<bend.at)M-=(bend.at-bv)*bend.k;if(r()<.1)M-=.45;s.push({bv:bv+gauss(r)*.012,M})}};
+  const br=(pts,n)=>{for(let i=0;i<n;i++){const u=r()*(pts.length-1),k=Math.floor(u),t=u-k,a=pts[k],b=pts[Math.min(k+1,pts.length-1)];s.push({bv:lerp(a[0],b[0],t)+gauss(r)*.025,M:lerp(a[1],b[1],t)+gauss(r)*.12})}};
+  if(c.gen==='young')ms(-0.22,1.55,85);
+  if(c.gen==='mid'){ms(0.02,1.6,75,{at:.15,k:3.5});br([[0.95,0.9],[1.05,0.4],[1.12,-0.1]],6)}
+  if(c.gen==='old'){ms(0.42,1.6,70,{at:.55,k:4});br([[0.45,3.0],[0.85,3.2],[0.95,2.2],[1.05,1.1],[1.2,0.1],[1.4,-1.2]],30)}
+  return s.map(p=>({...p,m:p.M+c.mu,delay:(p.bv+0.4)/2.4*700+r()*260}));
+}
+CLUSTERS.forEach(c=>c.stars=genCluster(c));
+
+const PL=P=>-2.5*Math.log10(P)-1.5;
+const CEPH=[
+  {id:'A',name:'세페이드 A',P:3,amp:0.8,mmean:7.3,M:-2.7,L:1000,mu:10,d:1000,win:10,phase:.4,seed:5},
+  {id:'B',name:'세페이드 B',P:30,amp:1.0,mmean:8.3,M:-5.2,L:10000,mu:13.5,d:5000,win:100,phase:.4,seed:9}];
+const gshape=ph=>{ph=((ph%1)+1)%1;return ph<.18?Math.cos(Math.PI*ph/.18):-Math.cos(Math.PI*(ph-.18)/.82)};
+const mag=(c,t)=>c.mmean+c.amp/2*gshape(t/c.P+c.phase);
+CEPH.forEach(c=>{const r=rng(c.seed);c.obs=[];for(let i=0;i<58;i++){const t=clamp((i+.5+(r()-.5)*.6)*c.win/58,0,c.win);c.obs.push({t,m:mag(c,t)+gauss(r)*.02})}
+  c.peaks=[];for(let k=0;k<20;k++){const t=(.18-c.phase+k)*c.P;if(t>0&&t<c.win)c.peaks.push(t)}});
+const CAL=(()=>{const r=rng(77),a=[];for(let i=0;i<22;i++){const p=Math.pow(10,.05+r()*1.9);a.push({p,M:PL(p)+gauss(r)*.17})}return a})();
+
+/* ---------- 상태 ---------- */
+const MODE='student';
+const S={mode:MODE,snapped:false,snapT:0,plSnap:false,lcSnap:'',tab:'ms',cl:null,clT:0,shift:0,auto:null,ceph:null,cephT:0,stage:1,done:{A:false,B:false},hintMS:false,hintC:false,hPL:null,hLC:null};
+let HRG=null,PLG=null,LCG=null;
+
+/* ---------- 입력 필드 ---------- */
+const MSF=[{k:'mu',l:'거리지수 m − M',u:'',a:c=>c.mu,tol:.3,abs:1},{k:'d',l:'거리 d',u:'pc',a:c=>c.d,tol:.15}];
+const FP={k:'P',l:'주기 P',u:'일',a:c=>c.P,tol:.1},FM={k:'M',l:'절대등급 M',u:'',a:c=>c.M,tol:.15,abs:1},
+      Fm={k:'m',l:'평균 겉보기등급 m',u:'',a:c=>c.mmean,tol:.1,abs:1},Fd={k:'d',l:'거리 d',u:'pc',a:c=>c.d,tol:.12},
+      FL={k:'L',l:'광도 L',u:'L☉',a:c=>c.L,tol:.2};
+const C1=[FP,FM,Fm,Fd],C2=[FP,FL,FM,Fm,Fd];
+const fmtAns=(f,v)=>(f.k==='d'||f.k==='L')?fN(v):(f.k==='P'?String(v):f1(v));
+function renderFields(box,defs,obj,pre){
+  box.innerHTML='';
+  defs.forEach(f=>{const id=`${pre}-${f.k}`,r=document.createElement('div');r.className='row';
+    r.innerHTML=`<label for="${id}">${f.l}</label><input id="${id}" inputmode="decimal" autocomplete="off" ${obj?'placeholder="?"':'disabled'}><span class="unit">${f.u}</span><span class="st"></span>`+
+      (obj?`<span class="ans teacher-only">정답 ${fmtAns(f,f.a(obj))}${f.u?' '+f.u:''}</span>`:'');
+    box.append(r)});
+}
+const parse=v=>{v=v.replace(/[−–]/g,'-').replace(/,/g,'').trim();return v===''?NaN:Number(v)};
+function check(box,defs,obj){
+  let all=true,any=false;const rows=[...box.querySelectorAll('.row')];
+  defs.forEach((f,i)=>{const v=parse(rows[i].querySelector('input').value),st=rows[i].querySelector('.st');
+    if(isNaN(v)){st.textContent='';st.className='st';all=false;return}
+    any=true;const a=f.a(obj),ok=f.abs?Math.abs(v-a)<=f.tol+1e-9:Math.abs(v-a)<=Math.abs(a)*f.tol;
+    st.textContent=ok?'✓':'✗';st.className='st '+(ok?'ok':'no');if(!ok)all=false});
+  return{all,any};
+}
+const sol=lines=>`<span class="tag">정답 · 풀이</span><ol>${lines.map(l=>`<li>${l}</li>`).join('')}</ol>`;
+const pw10=x=>`10<sup>${x.toFixed(1)}</sup>`;
+
+/* ---------- 주계열 맞추기 ---------- */
+const hrCv=$('#hr'),slider=$('#shift'),out=$('#shiftOut');
+const buzz=()=>{try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}};
+function setShift(v,mag=true){let s=Math.round(clamp(v,0,12)*10)/10,sn=false;
+  if(mag&&S.cl&&Math.abs(v-S.cl.mu)<0.35){s=S.cl.mu;sn=true}
+  if(sn&&!S.snapped){S.snapT=performance.now();buzz()}
+  S.snapped=sn;S.shift=s;slider.value=s;out.textContent=f1(s)+' 등급';out.classList.toggle('snap',sn)}
+function renderMS(){
+  renderFields($('#msFields'),MSF,S.cl,'ms');$('#msMsg').textContent='';$('#msMsg').className='msg';
+  const c=S.cl;
+  $('#msAnswer').innerHTML=c?sol([`성단을 ${f1(c.mu)}등 올리면 주계열이 겹침`,`m − M = ${f1(c.mu)}`,`log d = (${f1(c.mu)} + 5) ÷ 5 = ${((c.mu+5)/5).toFixed(1)}`,`d = ${pw10((c.mu+5)/5)} ≈ ${fN(c.d)} pc`]):'<span class="tag">정답 · 풀이</span><span class="tip">성단을 고르세요</span>';
+}
+const clBox=$('#clPicks');
+CLUSTERS.forEach(c=>{const b=document.createElement('button');b.className='pick';b.innerHTML=`${c.name}<small>${c.tag}</small>`;
+  b.onclick=()=>{S.cl=c;S.clT=performance.now();S.auto=null;setShift(0);slider.disabled=false;
+    clBox.querySelectorAll('.pick').forEach(x=>x.classList.toggle('on',x===b));renderMS()};clBox.append(b)});
+slider.oninput=()=>{S.auto=null;setShift(+slider.value)};
+let drag=null;
+hrCv.addEventListener('pointerdown',e=>{if(!S.cl||!HRG)return;S.auto=null;drag={y:e.clientY,s:S.shift};hrCv.setPointerCapture(e.pointerId)});
+hrCv.addEventListener('pointermove',e=>{if(drag)setShift(drag.s+(drag.y-e.clientY)/(HRG.ph/27))});
+['pointerup','pointercancel'].forEach(t=>hrCv.addEventListener(t,()=>drag=null));
+$('#msCheck').onclick=()=>{const m=$('#msMsg');if(!S.cl){m.textContent='먼저 성단을 고르세요.';m.className='msg';return}
+  const r=check($('#msFields'),MSF,S.cl);
+  if(!r.any){m.textContent='값을 입력하세요.';m.className='msg'}
+  else if(r.all){m.textContent=`정답! ${S.cl.name}까지 약 ${fN(S.cl.d)} pc`;m.className='msg ok';celebrate()}
+  else{m.textContent='✗ 표시를 다시 확인하세요.';m.className='msg no'}};
+$('#msHint').onclick=()=>{S.hintMS=!S.hintMS;$('#msHints').hidden=!S.hintMS};
+$('#msAuto').onclick=()=>{if(S.cl)S.auto={from:S.shift,to:S.cl.mu,t:performance.now()}};
+
+function drawHR(now){
+  const {ctx,w,h}=fit(hrCv);ctx.clearRect(0,0,w,h);
+  const P={l:50,r:54,t:12,b:46},pw=w-P.l-P.r,ph=h-P.t-P.b;
+  const X=b=>P.l+(b+0.4)/2.4*pw,Y=M=>P.t+(M+6)/27*ph;
+  HRG={ph};
+  ctx.lineWidth=1;
+  for(let i=0;i<=6;i++){const b=-0.4+i*.4,x=X(b);ctx.strokeStyle=K.grid;line(ctx,x,P.t,x,P.t+ph);txt(ctx,minus(b.toFixed(1)),x,P.t+ph+22,K.muted,'center')}
+  for(let M=-4;M<=20;M+=4){const y=Y(M);ctx.strokeStyle=K.grid;line(ctx,P.l,y,P.l+pw,y);txt(ctx,minus(M),P.l-8,y+4,K.muted,'right')}
+  ctx.strokeStyle=K.line;ctx.strokeRect(P.l+.5,P.t+.5,pw-1,ph-1);
+  ctx.fillStyle=bvGrad(ctx,P.l,P.l+pw);ctx.fillRect(P.l,P.t+ph+4,pw,3);
+  txt(ctx,'색지수 B − V',P.l+pw/2,h-4,K.fg,'center','alphabetic',`12px ${BODY}`);
+  vtitle(ctx,'절대등급 M',12,P.t+ph/2,K.fg);
+  ctx.save();ctx.beginPath();ctx.rect(P.l,P.t,pw,ph);ctx.clip();
+  // 표준 주계열
+  ctx.beginPath();for(let i=0;i<=213;i++){const b=-0.33+i*.01,x=X(b),y=Y(Mz(b));i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+  ctx.lineCap='round';ctx.lineJoin='round';
+  const sk=S.snapped&&S.cl?clamp((now-S.snapT)/500,0,1):0;
+  ctx.strokeStyle=S.snapped&&S.cl?`rgba(111,218,168,${.12+.35*(1-sk)})`:'rgba(255,255,255,.07)';ctx.lineWidth=S.snapped&&S.cl?14+10*(1-sk):12;ctx.stroke();
+  ctx.strokeStyle=bvGrad(ctx,P.l,P.l+pw);ctx.lineWidth=2.2;ctx.stroke();
+  txt(ctx,'표준 주계열',X(1.55)+10,Y(10.6),K.muted,'left','alphabetic',`12px ${BODY}`);
+  ctx.strokeStyle=K.warm;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(X(.65),Y(4.8),4.5,0,Math.PI*2);ctx.stroke();
+  txt(ctx,'태양',X(.65)-9,Y(4.8)-6,K.warm,'right','alphabetic',`11px ${BODY}`);
+  // 성단
+  if(S.cl){const el=now-S.clT;
+    for(const s of S.cl.stars){const k=RM?1:clamp((el-s.delay)/450,0,1);if(k<=0)continue;
+      const e=backOut(k),x=X(s.bv),y=Y(s.m-S.shift);ctx.globalAlpha=clamp(k*1.6,0,1);
+      ctx.fillStyle=bvColor(s.bv,.22);dot(ctx,x,y,6*e);ctx.fillStyle=bvColor(s.bv,1);dot(ctx,x,y,2.5*e)}
+    ctx.globalAlpha=1;
+    if(!RM&&el<1300){const sx=P.l+clamp(el/1000,0,1)*pw;ctx.strokeStyle='rgba(255,184,102,.35)';ctx.lineWidth=1;line(ctx,sx,P.t,sx,P.t+ph)}
+    if(S.snapped)txt(ctx,'주계열과 딱 맞았어요',P.l+12,P.t+22,K.ok,'left','alphabetic',`600 13px ${BODY}`);
+  }
+  ctx.restore();
+  if(S.cl){for(let M=-4;M<=20;M+=4)txt(ctx,f1(M+S.shift),P.l+pw+6,Y(M)+4,K.warm,'left');
+    vtitle(ctx,`겉보기등급 m (${S.cl.name})`,w-9,P.t+ph/2,K.warm)}
+}
+
+/* ---------- 세페이드 ---------- */
+const plCv=$('#pl'),lcCv=$('#lc'),glyph=$('#glyph');
+const stage2Btn=$('#stage2Btn');
+function lockState(){const locked=S.mode==='student'&&!(S.done.A&&S.done.B);stage2Btn.disabled=locked;
+  stage2Btn.innerHTML='2단계 · 광도 <span class="badge">어려움</span>'+(locked?' (잠김)':'');
+  if(locked&&S.stage===2)setStage(1)}
+function setStage(n){S.stage=n;$('#stageSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.stage===n));
+  $('#ceFx').textContent=n===1?'거리지수 식 보기':'식 보기 (포그슨 · 거리지수)';
+  $('#ceFormula').innerHTML=n===1?'<span>m − M = 5 log d − 5</span><span class="tip">m 겉보기등급 · M 절대등급 · d 거리(pc)</span>'
+    :'<span>M − M☉ = −2.5 log (L / L☉)</span><span>m − M = 5 log d − 5</span><span class="tip">L은 태양 광도(L☉)의 몇 배인지로 읽어요</span>';
+  $('#ceHints').innerHTML=(n===1?['극대(가장 밝을 때) 사이 간격 = 주기','평균 m = (최대 + 최소) ÷ 2','왼쪽 그래프에 주기를 대 보세요.','log 5 ≈ 0.7']
+    :['태양의 절대등급 M☉ = 4.8','광도 L은 L☉ 단위 → L / L☉ = 그래프에서 읽은 수','log 1000 = 3,  log 10⁴ = 4','평균 m = (최대 + 최소) ÷ 2','log 5 ≈ 0.7']).map(s=>`<li>${s}</li>`).join('');
+  renderCE()}
+function renderCE(){
+  const c=S.ceph,defs=S.stage===1?C1:C2;renderFields($('#ceFields'),defs,c,'ce');$('#ceMsg').textContent='';$('#ceMsg').className='msg';
+  if(!c){$('#ceAnswer').innerHTML='<span class="tag">정답 · 풀이</span><span class="tip">변광성을 고르세요</span>';return}
+  const mx=c.mmean-c.amp/2,mn=c.mmean+c.amp/2,lg=(c.mu+5)/5;
+  const L=S.stage===1?[`극대 사이 간격 → P = ${c.P}일`,`주기–광도 관계 → M = ${f1(c.M)}`]
+    :[`극대 사이 간격 → P = ${c.P}일`,`주기–광도 관계 → L = ${fN(c.L)} L☉`,`M = 4.8 − 2.5 log ${fN(c.L)} = 4.8 − ${f1(2.5*Math.log10(c.L))} = ${f1(c.M)}`];
+  $('#ceAnswer').innerHTML=sol([...L,`m = (${f1(mx)} + ${f1(mn)}) ÷ 2 = ${f1(c.mmean)}`,`m − M = ${f1(c.mu)} → log d = ${lg.toFixed(1)}`,`d = ${pw10(lg)} ≈ ${fN(c.d)} pc`]);
+}
+const ceBox=$('#cePicks');
+CEPH.forEach(c=>{const b=document.createElement('button');b.className='pick';b.dataset.id=c.id;
+  b.onclick=()=>{S.ceph=c;S.cephT=performance.now();ceBox.querySelectorAll('.pick').forEach(x=>x.classList.toggle('on',x===b));renderCE()};ceBox.append(b)});
+function renderPicks(){ceBox.querySelectorAll('.pick').forEach(b=>{const c=CEPH.find(x=>x.id===b.dataset.id);
+  b.innerHTML=`${c.name}<small class="${S.done[c.id]?'done':''}">${S.done[c.id]?'1단계 완료':'변광성'}</small>`})}
+renderPicks();
+$('#stageSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled)setStage(+b.dataset.stage)});
+$('#ceCheck').onclick=()=>{const m=$('#ceMsg'),c=S.ceph;if(!c){m.textContent='먼저 변광성을 고르세요.';m.className='msg';return}
+  const r=check($('#ceFields'),S.stage===1?C1:C2,c);
+  if(!r.any){m.textContent='값을 입력하세요.';m.className='msg';return}
+  if(!r.all){m.textContent='✗ 표시를 다시 확인하세요.';m.className='msg no';return}
+  let s=`정답! ${c.name}까지 약 ${fN(c.d)} pc`;
+  if(S.stage===1&&!S.done[c.id]){S.done[c.id]=true;renderPicks();lockState();if(S.done.A&&S.done.B&&S.mode==='student')s+=' · 2단계가 열렸어요'}
+  m.textContent=s;m.className='msg ok';celebrate()};
+$('#ceHint').onclick=()=>{S.hintC=!S.hintC;$('#ceHints').hidden=!S.hintC};
+const hov=(cv,key)=>{cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();S[key]={x:e.clientX-r.left,y:e.clientY-r.top}});cv.addEventListener('pointerleave',()=>S[key]=null)};
+hov(plCv,'hPL');hov(lcCv,'hLC');
+
+const SUP={2:'²',3:'³',4:'⁴',5:'⁵'};
+const fmtL=L=>L>=1000?fN(Math.round(L/100)*100):fN(Math.round(L/10)*10);
+function drawPL(now){
+  const {ctx,w,h}=fit(plCv);ctx.clearRect(0,0,w,h);
+  const st=S.stage,P={l:54,r:14,t:12,b:46},pw=w-P.l-P.r,ph=h-P.t-P.b;
+  const X=p=>P.l+Math.log10(p)/2*pw;
+  const top=st===1?-7.5:4.8-12.5,bot=st===1?-0.5:4.8-5;
+  const Y=M=>P.t+(M-top)/(bot-top)*ph;
+  ctx.lineWidth=1;
+  for(const p of [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100]){ctx.strokeStyle=(p===1||p===10||p===100)?K.line:K.grid;line(ctx,X(p),P.t,X(p),P.t+ph)}
+  for(const p of [1,2,3,5,10,20,30,50,100])txt(ctx,String(p),X(p),P.t+ph+18,K.muted,'center');
+  if(st===1){for(let i=0;i<=12;i++){const M=-7+i*.5,y=Y(M);ctx.strokeStyle=i%2?K.grid:K.line;line(ctx,P.l,y,P.l+pw,y);if(i%2===0)txt(ctx,minus(M),P.l-8,y+4,K.muted,'right')}}
+  else{for(let d=2;d<=5;d++)for(let k=1;k<=(d===5?1:9);k++){const y=Y(4.8-2.5*(d+Math.log10(k)));ctx.strokeStyle=k===1?K.line:K.grid;line(ctx,P.l,y,P.l+pw,y);if(k===1)txt(ctx,'10'+SUP[d],P.l-8,y+4,K.muted,'right')}}
+  txt(ctx,'주기 P (일)',P.l+pw/2,h-6,K.fg,'center','alphabetic',`12px ${BODY}`);
+  vtitle(ctx,st===1?'절대등급 M':'광도 L (L☉)',12,P.t+ph/2,K.fg);
+  ctx.save();ctx.beginPath();ctx.rect(P.l,P.t,pw,ph);ctx.clip();
+  ctx.fillStyle='rgba(142,148,166,.55)';CAL.forEach(s=>dot(ctx,X(s.p),Y(s.M),2.3));
+  ctx.lineCap='round';ctx.strokeStyle='rgba(255,184,102,.15)';ctx.lineWidth=9;line(ctx,X(1),Y(PL(1)),X(100),Y(PL(100)));
+  ctx.strokeStyle=K.warm;ctx.lineWidth=2;line(ctx,X(1),Y(PL(1)),X(100),Y(PL(100)));
+  const guide=(p,col,label)=>{const x=X(p),y=Y(PL(p));ctx.setLineDash([4,4]);ctx.strokeStyle=col;ctx.lineWidth=1;line(ctx,x,P.t+ph,x,y);line(ctx,P.l,y,x,y);ctx.setLineDash([]);
+    ctx.fillStyle=col;dot(ctx,x,y,4.5);if(label){const right=x<P.l+pw*.6;txt(ctx,label,x+(right?10:-10),y-10,col,right?'left':'right','alphabetic',`12px ${MONO}`)}};
+  const val=p=>st===1?`M ${f1(PL(p))}`:`L ${fmtL(Math.pow(10,(4.8-PL(p))/2.5))} L☉`;
+  if(S.mode==='teacher'&&S.ceph)guide(S.ceph.P,K.ok,`P ${S.ceph.P}일 → ${st===1?'M '+f1(S.ceph.M):'L '+fN(S.ceph.L)+' L☉'}`);
+  if(S.hPL){let p=Math.pow(10,clamp((S.hPL.x-P.l)/pw,0,1)*2);const c=S.ceph,sn=!!c&&Math.abs(X(p)-X(c.P))<14;
+    if(sn){p=c.P;if(!S.plSnap)buzz()}S.plSnap=sn;
+    const col=sn?K.ok:K.cool;guide(p,col,null);
+    if(sn){ctx.strokeStyle=K.ok;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(X(p),Y(PL(p)),9,0,Math.PI*2);ctx.stroke()}
+    const v=sn?(st===1?`M ${f1(c.M)}`:`L ${fN(c.L)} L☉`):val(p);
+    const s=`P ${p<10?f1(p):Math.round(p)}일 → ${v}`;ctx.font=`12px ${MONO}`;const tw=ctx.measureText(s).width;
+    ctx.fillStyle='rgba(8,10,16,.88)';ctx.fillRect(P.l+8,P.t+8,tw+16,24);txt(ctx,s,P.l+16,P.t+24,col,'left','alphabetic',`12px ${MONO}`)}
+  else S.plSnap=false;
+  ctx.restore();
+}
+let lastLive='';
+function drawLC(now){
+  const {ctx,w,h}=fit(lcCv);ctx.clearRect(0,0,w,h);const c=S.ceph;
+  const g=fit(glyph);g.ctx.clearRect(0,0,g.w,g.h);
+  if(!c){txt(ctx,'세페이드 변광성을 고르세요',w/2,h/2,K.dim,'center','middle',`13px ${BODY}`);if(lastLive){$('#live').textContent='';lastLive=''}return}
+  const P={l:46,r:12,t:14,b:38},pw=w-P.l-P.r,ph=h-P.t-P.b;
+  const lo=c.mmean-c.amp/2-0.25,hi=c.mmean+c.amp/2+0.25;
+  const X=t=>P.l+t/c.win*pw,Y=m=>P.t+(m-lo)/(hi-lo)*ph;
+  ctx.lineWidth=1;
+  for(let i=Math.ceil(lo*5);i<=Math.floor(hi*5);i++){const m=i/5,y=Y(m);ctx.strokeStyle=K.grid;line(ctx,P.l,y,P.l+pw,y);txt(ctx,m.toFixed(1),P.l-7,y+4,K.muted,'right')}
+  for(let i=0;i<=10;i++){const t=i*c.win/10,x=X(t);ctx.strokeStyle=i%2?K.grid:K.line;line(ctx,x,P.t,x,P.t+ph);if(i%2===0)txt(ctx,String(t),x,P.t+ph+16,K.muted,'center')}
+  txt(ctx,'시간 (일)',P.l+pw/2,h-4,K.fg,'center','alphabetic',`12px ${BODY}`);
+  vtitle(ctx,'겉보기등급 m',10,P.t+ph/2,K.fg);
+  const el=now-S.cephT,rev=RM?1:clamp(el/1000,0,1),tEnd=ease(rev)*c.win;
+  ctx.save();ctx.beginPath();ctx.rect(P.l,P.t,pw,ph);ctx.clip();
+  ctx.beginPath();for(let i=0;i<=400;i++){const t=i/400*c.win;if(t>tEnd)break;const x=X(t),y=Y(mag(c,t));i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+  ctx.strokeStyle='rgba(141,184,255,.35)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle=K.fg;c.obs.forEach(o=>{if(o.t<=tEnd)dot(ctx,X(o.t),Y(o.m),2.2)});
+  const T=S.mode==='teacher',H=T||S.hintC;
+  const mx=c.mmean-c.amp/2,mn=c.mmean+c.amp/2;
+  ctx.setLineDash([5,4]);
+  ctx.strokeStyle=K.cool;line(ctx,P.l,Y(mx),P.l+pw,Y(mx));
+  ctx.strokeStyle=K.warm;line(ctx,P.l,Y(mn),P.l+pw,Y(mn));
+  if(H){ctx.setLineDash([2,4]);ctx.strokeStyle=K.ok;line(ctx,P.l,Y(c.mmean),P.l+pw,Y(c.mmean))}
+  ctx.setLineDash([]);
+  txt(ctx,'최대 밝기'+(T?' '+f1(mx):''),P.l+pw-6,Y(mx)-5,K.cool,'right','alphabetic',`11px ${BODY}`);
+  txt(ctx,'최소 밝기'+(T?' '+f1(mn):''),P.l+pw-6,Y(mn)+14,K.warm,'right','alphabetic',`11px ${BODY}`);
+  if(H){txt(ctx,'평균'+(T?' '+f1(c.mmean):''),P.l+pw-6,Y(c.mmean)-5,K.ok,'right','alphabetic',`11px ${BODY}`);
+    ctx.fillStyle=K.ok;c.peaks.forEach(t=>{const x=X(t),y=Y(mx)-6;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-4,y-6);ctx.lineTo(x+4,y-6);ctx.fill()});
+    if(c.peaks.length>1){const x1=X(c.peaks[0]),x2=X(c.peaks[1]),y=Y(mx)-16;ctx.strokeStyle=K.ok;ctx.lineWidth=1;line(ctx,x1,y,x2,y);line(ctx,x1,y-4,x1,y+4);line(ctx,x2,y-4,x2,y+4);
+      txt(ctx,T?`P = ${c.P}일`:'P',(x1+x2)/2,y-5,K.ok,'center','alphabetic',`11px ${MONO}`)}}
+  // 움직이는 커서 + 별
+  let tc=RM?null:((now/1000)%6)/6*c.win,mc=tc==null?c.mmean:mag(c,tc);
+  if(tc!=null&&rev>=1){ctx.strokeStyle='rgba(233,235,241,.18)';line(ctx,X(tc),P.t,X(tc),P.t+ph);ctx.fillStyle=K.fg;dot(ctx,X(tc),Y(mc),3.5)}
+  if(S.hLC){let t=clamp((S.hLC.x-P.l)/pw,0,1)*c.win,m=lo+clamp((S.hLC.y-P.t)/ph,0,1)*(hi-lo),st=false,sm=null;
+    for(const pk of c.peaks)if(Math.abs(X(pk)-X(t))<10){t=pk;st=true}
+    for(const [v,n] of [[mx,'최대'],[mn,'최소'],[c.mmean,'평균']])if(Math.abs(Y(v)-Y(m))<9){m=v;sm=n}
+    const key=(st?'t'+t:'')+(sm||'');if(key&&key!==S.lcSnap)buzz();S.lcSnap=key;
+    const x=X(t),y=Y(m);ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.strokeStyle=st?K.ok:K.cool;line(ctx,x,P.t,x,P.t+ph);
+    ctx.strokeStyle=sm?K.ok:K.cool;line(ctx,P.l,y,P.l+pw,y);ctx.setLineDash([]);
+    if(st){ctx.strokeStyle=K.ok;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,Y(mag(c,t)),8,0,Math.PI*2);ctx.stroke()}
+    ctx.fillStyle=(st||sm)?K.ok:K.cool;dot(ctx,x,y,3.5);
+    const s=`t ${f1(t)}일${st?' (극대)':''} · m ${m.toFixed(2)}${sm?` (${sm})`:''}`;ctx.font=`12px ${MONO}`;const tw=ctx.measureText(s).width;
+    ctx.fillStyle='rgba(8,10,16,.88)';ctx.fillRect(P.l+6,P.t+ph-30,tw+16,24);txt(ctx,s,P.l+14,P.t+ph-14,(st||sm)?K.ok:K.cool,'left','alphabetic',`12px ${MONO}`)}
+  else S.lcSnap='';
+  ctx.restore();
+  const flux=Math.pow(10,-0.4*(mc-c.mmean)),R=8*Math.sqrt(flux),cx=g.w/2,cy=g.h/2;
+  const gr=g.ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.2);gr.addColorStop(0,'rgba(255,248,235,1)');gr.addColorStop(.35,'rgba(255,214,150,.85)');gr.addColorStop(1,'rgba(255,184,102,0)');
+  g.ctx.fillStyle=gr;dot(g.ctx,cx,cy,R*2.2);
+  const lv=tc==null?'':`m ${mc.toFixed(2)}`;if(lv!==lastLive){$('#live').textContent=lv;lastLive=lv}
+}
+
+/* ---------- 폭죽 ---------- */
+const fxCv=$('#fx');let FX=[],ROCK=[],fxText=null,fxOn=false;
+const FXC=['#ffb866','#8db8ff','#6fdaa8','#ff8fb1','#fff3c4','#c9a6ff','#ffe066'];
+function burst(x,y){const a1=FXC[Math.random()*FXC.length|0],a2=FXC[Math.random()*FXC.length|0],n=90+(Math.random()*40|0),ring=Math.random()<.35;
+  for(let i=0;i<n;i++){const a=Math.PI*2*i/n+Math.random()*.08,v=ring?5:1.5+Math.random()*5;
+    FX.push({x,y,px:x,py:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1,decay:.007+Math.random()*.009,col:Math.random()<.55?a1:a2,s:1.3+Math.random()*1.6,tw:Math.random()<.3})}
+  FX.push({flash:1,x,y,life:1,decay:.06})}
+function celebrate(){if(RM)return;const W=innerWidth,H=innerHeight;fxText={t:performance.now()};
+  for(let i=0;i<12;i++)setTimeout(()=>ROCK.push({x:W*(.1+Math.random()*.8),y:H+10,vy:-(10+Math.random()*5),vx:(Math.random()-.5)*1.5,ty:H*(.12+Math.random()*.38),col:FXC[Math.random()*FXC.length|0]}),i*(150+Math.random()*120))}
+function drawFX(now){
+  const active=FX.length||ROCK.length||fxText;if(!active&&!fxOn)return;
+  const {ctx,w,h}=fit(fxCv);ctx.clearRect(0,0,w,h);fxOn=!!active;if(!active)return;
+  ctx.globalCompositeOperation='lighter';
+  ROCK=ROCK.filter(r=>{r.px=r.x;r.py=r.y;r.x+=r.vx;r.y+=r.vy;r.vy*=.982;
+    ctx.strokeStyle=r.col;ctx.lineWidth=2;ctx.globalAlpha=.8;line(ctx,r.x,r.y,r.x-r.vx*3,r.y-r.vy*3);ctx.globalAlpha=1;ctx.fillStyle='#fff';dot(ctx,r.x,r.y,2);
+    if(r.y<=r.ty||r.vy>-2.5){burst(r.x,r.y);return false}return true});
+  FX=FX.filter(p=>{p.life-=p.decay;if(p.life<=0)return false;
+    if(p.flash){ctx.globalAlpha=p.life*.6;const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,90);g.addColorStop(0,'rgba(255,250,230,1)');g.addColorStop(1,'rgba(255,250,230,0)');ctx.fillStyle=g;dot(ctx,p.x,p.y,90);return true}
+    p.px=p.x;p.py=p.y;p.x+=p.vx;p.y+=p.vy;p.vx*=.975;p.vy=p.vy*.975+.07;
+    const a=p.tw?p.life*(.5+.5*Math.sin(now/40+p.x)):p.life;ctx.globalAlpha=Math.max(0,a);
+    ctx.strokeStyle=p.col;ctx.lineWidth=p.s;line(ctx,p.px,p.py,p.x,p.y);ctx.fillStyle=p.col;dot(ctx,p.x,p.y,p.s*.8);return true});
+  ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+  if(fxText){const k=(now-fxText.t)/2600;if(k>1)fxText=null;else{const sc=k<.18?backOut(k/.18):1+.04*Math.sin(k*20),al=k>.75?(1-k)/.25:1;
+    ctx.save();ctx.globalAlpha=al;ctx.translate(w/2,h*.4);ctx.scale(sc,sc);ctx.shadowColor=K.warm;ctx.shadowBlur=40;
+    txt(ctx,'정답!',0,0,'#fff6e6','center','middle',`600 ${Math.min(120,w*.18)}px "Space Grotesk","IBM Plex Sans KR",sans-serif`);ctx.restore()}}
+}
+
+/* ---------- 배경 별 ---------- */
+const sky=$('#sky');const STARS=(()=>{const r=rng(3);return Array.from({length:170},()=>({x:r(),y:r(),s:r()*1.1+.25,p:r()*6.28,v:.3+r()*1.2,bv:-0.3+r()*1.9}))})();
+function drawSky(now){const {ctx,w,h}=fit(sky);ctx.clearRect(0,0,w,h);for(const s of STARS){const a=.18+.4*(RM?.5:.5+.5*Math.sin(now/1000*s.v+s.p));ctx.fillStyle=bvColor(s.bv,a);dot(ctx,s.x*w,s.y*h,s.s)}}
+
+/* ---------- 모드 / 탭 ---------- */
+document.body.classList.toggle('teacher',S.mode==='teacher');
+const tog=(btn,box)=>{$(btn).onclick=()=>{const b=$(box);b.hidden=!b.hidden;$(btn).classList.toggle('on',!b.hidden)}};
+tog('#msFx','#msFormula');tog('#ceFx','#ceFormula');
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.tab=b.dataset.tab;
+  $('#tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$('#ms').hidden=S.tab!=='ms';$('#ceph').hidden=S.tab!=='ceph'});
+
+function frame(now){
+  drawSky(now);
+  if(S.auto){const k=clamp((now-S.auto.t)/1200,0,1);setShift(lerp(S.auto.from,S.auto.to,ease(k)),k>=1);if(k>=1)S.auto=null}
+  if(S.tab==='ms')drawHR(now);else{drawPL(now);drawLC(now)}
+  drawFX(now);
+  requestAnimationFrame(frame);
+}
+renderMS();setStage(1);lockState();clBox.querySelector('.pick').click();requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
