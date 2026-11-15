@@ -27,7 +27,7 @@ body{font-family:var(--f-body);font-size:14px;line-height:1.5}
 .lb.p1{color:var(--fg)}
 .lb.mark{font-family:var(--f-display);font-size:13px;color:var(--fg)}
 .lb.ring{font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
-.lb.act.open{color:var(--warm)} .lb.act.glob{color:var(--cool)}
+.lb.act.open{color:var(--cool)} .lb.act.glob{color:var(--warm)}
 #sel{position:fixed;left:0;top:0;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:1px solid var(--fg);opacity:0;pointer-events:none;transition:opacity .25s}
 #sel.show{opacity:.8}
 .ui{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;gap:12px;
@@ -41,18 +41,30 @@ h1{font-family:var(--f-display);font-weight:600;font-size:20px;letter-spacing:-.
 .tg{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;
   border:1px solid var(--line);background:var(--panel);font-size:12.5px;color:var(--fg);transition:color .2s,opacity .2s;backdrop-filter:blur(6px)}
 .tg i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none;transition:opacity .2s}
-.tg.open i{background:var(--warm);box-shadow:0 0 8px var(--warm)}
-.tg.glob i{background:var(--cool);box-shadow:0 0 8px var(--cool)}
+.tg.open{--glow:var(--cool)} .tg.glob{--glow:var(--warm)} .tg.struct{--glow:var(--fg)}
+.tg.open i,.tg.glob i{background:var(--glow);box-shadow:0 0 8px var(--glow)}
 .tg small{color:var(--muted);font-size:11.5px}
-.tg[aria-pressed=false]{color:var(--dim)}
-.tg[aria-pressed=false] i{opacity:.25;box-shadow:none}
-.tg[aria-pressed=false] small{color:var(--dim)}
+.tg{border-color:var(--line);transition:border-color .25s,background .25s}
+.tg[aria-pressed=true]{border-color:var(--glow);background:var(--panel-2)}
+@keyframes invite{0%,100%{box-shadow:0 0 0 0 transparent;border-color:var(--line)}50%{box-shadow:0 0 16px 0 var(--glow);border-color:var(--glow)}}
+.toggles.invite .tg{animation:invite 1.9s ease-in-out infinite}
+.toggles.invite .tg:nth-child(2){animation-delay:.3s}
+.toggles.invite .tg:nth-child(3){animation-delay:.6s}
+.top{display:flex;flex-direction:column;gap:10px}
+.story{align-self:flex-end;box-sizing:border-box;width:340px;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;
+  backdrop-filter:blur(6px);opacity:0;transform:translateY(-6px);transition:opacity .35s,transform .35s;pointer-events:none}
+.story.show{opacity:1;transform:none}
+.story>div{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.story h2{font-family:var(--f-display);font-size:15px;font-weight:600;margin:0}
+.story ul{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:3px}
+.lb.st{font-family:var(--f-display);font-size:13px;color:var(--fg)}
+.lb.dim{font-family:var(--f-mono);font-size:12px;color:var(--fg)}
 .bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;
   min-width:210px;max-width:100%;backdrop-filter:blur(6px);opacity:0;transform:translateY(6px);transition:opacity .3s,transform .3s;pointer-events:none}
 .card.show{opacity:1;transform:none}
 .eyebrow{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;color:var(--muted)}
-.eyebrow.open{color:var(--warm)} .eyebrow.glob{color:var(--cool)}
+.eyebrow.open{color:var(--cool)} .eyebrow.glob{color:var(--warm)}
 .nm{font-family:var(--f-display);font-size:17px;font-weight:600}
 .nm small{font-family:var(--f-body);font-weight:400;font-size:12.5px;color:var(--muted);margin-left:6px}
 .dist{font-family:var(--f-mono);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
@@ -66,8 +78,8 @@ h1{font-family:var(--f-display);font-weight:600;font-size:20px;letter-spacing:-.
 .btn:hover{border-color:var(--dim)}
 button:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
 #err{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);padding:24px;text-align:center}
-@media (max-width:560px){h1{font-size:17px}.sub{display:none}.seg button{padding:6px 10px}.views{width:100%;justify-content:space-between}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:560px){h1{font-size:17px}.sub{display:none}.story{width:100%}.story ul{font-size:12.5px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.toggles.invite .tg{border-color:var(--glow)}}
 </style>
 
 <canvas id="gl" aria-label="우리은하 성단 3D 지도"></canvas>
@@ -76,18 +88,34 @@ button:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
 <div id="err" hidden>이 브라우저에서는 3D 그래픽(WebGL)을 사용할 수 없어요.</div>
 
 <div class="ui">
-  <header>
-    <div>
-      <h1>우리은하 성단 지도</h1>
-      <span class="sub">태양에서 잰 성단까지의 거리</span>
-    </div>
-    <div class="toggles">
-      <button class="tg open" id="tOpen" aria-pressed="true"><i></i>산개 성단 <small>주계열 맞추기</small></button>
-      <button class="tg glob" id="tGlob" aria-pressed="true"><i></i>구상 성단 <small>변광성</small></button>
-      <button class="tg" id="tDisk" aria-pressed="true"><i></i>은하 원반</button>
-      <button class="tg" id="tLine" aria-pressed="true"><i></i>거리선</button>
-    </div>
-  </header>
+  <div class="top">
+    <header>
+      <div>
+        <h1>우리은하 성단 지도</h1>
+        <span class="sub">태양에서 잰 성단까지의 거리</span>
+      </div>
+      <div class="toggles" id="tabs">
+        <button class="tg open" data-m="open" aria-pressed="false"><i></i>산개 성단 <small>주계열 맞추기</small></button>
+        <button class="tg glob" data-m="glob" aria-pressed="false"><i></i>구상 성단 <small>변광성</small></button>
+        <button class="tg struct" data-m="struct" aria-pressed="false">우리은하의 구조</button>
+      </div>
+    </header>
+    <aside class="story" id="story" aria-live="polite">
+      <div data-s="open" hidden>
+        <h2>산개 성단은 주계열 맞추기로</h2>
+        <ul><li>젊고 가까워서 주계열성이 밝은 별부터 어두운 별까지 잘 보여요.</li><li>거리를 알려 줄 변광성은 거의 없어요.</li><li>대부분 은하 원반 안, 태양에서 수 kpc 이내에 있어요.</li></ul>
+      </div>
+      <div data-s="glob" hidden>
+        <h2>구상 성단은 변광성으로</h2>
+        <ul><li>원반에만 있지 않고, 은하 중심을 둘러싼 헤일로에 공 모양으로 퍼져 있어요.</li><li>멀어서 주계열은 너무 어둡지만, 밝은 변광성이 많아요.</li><li>분포의 중심은 태양이 아니라 은하 중심이에요.</li></ul>
+      </div>
+      <div data-s="struct" hidden>
+        <h2>우리은하의 구조</h2>
+        <div class="seg" id="sub"><button data-sub="side" class="on">옆에서 본 모습</button><button data-sub="top">위에서 본 모습</button></div>
+        <ul><li>원반의 지름은 약 30 kpc</li><li>태양은 은하 중심에서 약 8.5 kpc</li></ul>
+      </div>
+    </aside>
+  </div>
   <div class="bottom">
     <div class="card" id="card" aria-live="polite">
       <span class="eyebrow" id="cKind"></span>
@@ -95,15 +123,7 @@ button:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
       <span class="dist" id="cDist"></span>
       <span class="meta" id="cMeta"></span>
     </div>
-    <div class="views">
-      <button class="btn" id="replay">↻ 거리 재기</button>
-      <div class="seg" id="views">
-        <button data-v="sun">태양 근처</button>
-        <button data-v="all" class="on">전체</button>
-        <button data-v="top">위에서</button>
-        <button data-v="side">옆에서</button>
-      </div>
-    </div>
+    <div class="views"><button class="btn" id="replay">↻ 다시보기</button></div>
   </div>
 </div>
 
@@ -143,9 +163,9 @@ const GLOB=[
 ['M72','',35.16,-32.68,17.0,3],['NGC 5053','',335.70,78.95,17.4,3],['M53','',332.96,79.76,17.9,2],['M75','',20.30,-25.75,20.9,2],
 ['M54','',5.61,-14.09,26.5,1],['NGC 6229','',73.64,40.31,30.5,2]];
 
-const R0=8.2,D2R=Math.PI/180,V3=THREE.Vector3;
+const R0=8.5,D2R=Math.PI/180,V3=THREE.Vector3;
 const SUN=new V3(-R0,0,0),GC=new V3(0,0,0);
-const COL={open:new THREE.Color(0xffb866),glob:new THREE.Color(0x8db8ff)};
+const COL={open:new THREE.Color(0x8db8ff),glob:new THREE.Color(0xffb866)};
 const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
 const gal=(l,b,d)=>{const cb=Math.cos(b*D2R);return new V3(d*cb*Math.cos(l*D2R)-R0,d*Math.sin(b*D2R),-d*cb*Math.sin(l*D2R))};
 
@@ -178,12 +198,12 @@ const diskMat=new THREE.ShaderMaterial({
  const put=(X,Y,Z,r,g,b,s)=>{P.push(X,Z,-Y);C.push(r,g,b);S.push(s)};
  const pitch=1/Math.tan(13*D2R);
  for(let i=0;i<30000;i++){ // 나선팔
-   const k=i%4,r=Math.min(17.5,3.4-Math.log(1-rnd()*.985)*4.2);
+   const k=i%4;let r;do{r=3.4-Math.log(1-rnd()*.985)*4.2}while(r>15);
    const a=k*Math.PI/2+.5+Math.log(r/3.4)*pitch,w=.38+r*.02,major=k%2===0?1:.6;
    const X=r*Math.cos(a)+gs()*w,Y=r*Math.sin(a)+gs()*w,br=(.25+rnd()*.55)*major,pk=rnd()<.06;
    put(X,Y,gs()*.12,(pk?1:.62)*br,(pk?.55:.76)*br,(pk?.7:1)*br,.1+rnd()*.16)}
  for(let i=0;i<14000;i++){ // 원반
-   const r=Math.min(19,-Math.log(1-rnd()*.995)*3.6),a=rnd()*6.283,br=.12+rnd()*.2;
+   let r;do{r=-Math.log(1-rnd()*.995)*3.6}while(r>15.5);const a=rnd()*6.283,br=.12+rnd()*.2;
    put(r*Math.cos(a),r*Math.sin(a),gs()*.2,.95*br,.84*br,.7*br,.14+rnd()*.2)}
  const ux=-Math.cos(27*D2R),uy=Math.sin(27*D2R);
  for(let i=0;i<6000;i++){ // 막대와 팽대부
@@ -196,7 +216,7 @@ const diskMat=new THREE.ShaderMaterial({
  const pts=new THREE.Points(g,diskMat);pts.frustumCulled=false;pts.renderOrder=0;scene.add(pts)}
 
 // 은하면 눈금 원
-const RINGS=[5,10,15,20];
+const RINGS=[5,10,15];
 for(const R of RINGS){const p=[];for(let i=0;i<=160;i++){const a=i/160*6.2832;p.push(R*Math.cos(a),0,R*Math.sin(a))}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
   scene.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0x232a3a,transparent:true,opacity:.9,depthWrite:false})))}
@@ -229,35 +249,53 @@ const sightG=mkLines(),dropG=mkLines();
 const hiG=new THREE.BufferGeometry().setFromPoints([SUN,SUN]);
 const hiL=new THREE.Line(hiG,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthTest:false,depthWrite:false}));
 hiL.frustumCulled=false;hiL.renderOrder=2;scene.add(hiL);
+// 구조 보기의 치수선 (지름 30 kpc, 태양–중심 8.5 kpc)
+const dimMat=new THREE.LineBasicMaterial({color:0xe9ebf1,transparent:true,opacity:0,depthTest:false,depthWrite:false});
+{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([-15,-5.5,0,15,-5.5,0,-15,-6,0,-15,-5,0,15,-6,0,15,-5,0,
+  -R0,-3,0,0,-3,0,-R0,-3.4,0,-R0,0,0,0,-3.4,0,0,0,0],3));const l=new THREE.LineSegments(g,dimMat);l.renderOrder=2;scene.add(l)}
 
 /* ---------- 라벨 ---------- */
 const LB=[],box=$('#labels');
 const mkLabel=(text,cls,pos,o)=>{const el=document.createElement('div');el.className='lb '+cls;el.textContent=text;box.appendChild(el);
   const L=Object.assign({el,pos,dx:11,w:60,on:false,ok:()=>true},o);LB.push(L);return L};
 mkLabel('태양','mark',SUN,{rank:0,dx:14});
-mkLabel('은하 중심','mark',GC,{rank:0});
-for(const c of CL)c.lb=mkLabel(c.name,c.kind+' p'+c.pri,c.cur,{rank:c.pri,ok:()=>c.a>.5,c});
-mkLabel(R0+' kpc','ring',new V3(-R0/2,0,0),{rank:4,dx:6});
+mkLabel('은하 중심','mark',GC,{rank:0,ok:()=>S.mode!=='struct'});
+for(const c of CL)c.lb=mkLabel(c.name,c.kind+' p'+c.pri,c.cur,{rank:c.pri,ok:()=>c.a>.5&&(S.mode!=='struct'||c===(S.hover||S.sel)),c});
+mkLabel(R0+' kpc','ring',new V3(-R0/2,0,0),{rank:4,dx:6,ok:()=>S.mode!=='struct'});
+{const st=()=>S.mode==='struct',side=()=>st()&&S.sub==='side',top=()=>st()&&S.sub==='top';
+ mkLabel('팽대부','st',new V3(.9,1.9,0),{rank:0,ok:st});
+ mkLabel('은하 원반','st',new V3(10.5,1.3,0),{rank:0,ok:st});
+ mkLabel('헤일로','st',new V3(5,9,0),{rank:0,ok:side});
+ mkLabel('구상 성단','st',CL.find(c=>c.name==='M3').cur,{rank:0,dx:13,ok:side});
+ mkLabel('나선팔','st',new V3(8.45,.2,7.06),{rank:0,ok:top});
+ mkLabel('30 kpc','dim',new V3(9,-5.5,0),{rank:0,cx:true,ok:st});
+ mkLabel(R0+' kpc','dim',new V3(-R0/2,-3,0),{rank:0,cx:true,ok:st})}
 for(const R of RINGS)mkLabel(R+' kpc','ring',new V3(R*Math.cos(2.2),0,R*Math.sin(2.2)),{rank:5,dx:6});
 LB.sort((a,b)=>a.rank-b.rank);
 const measure=()=>{for(const L of LB)L.w=L.el.offsetWidth};
 
 /* ---------- 카메라 ---------- */
-const cam={t:SUN.clone(),r:4,th:2.0,ph:1.05},goal={t:SUN.clone(),r:4,th:2.0,ph:1.05};
-const VIEWS={sun:{t:SUN,r:6.5,ph:1.05},all:{t:GC,r:56,ph:1.08},top:{t:GC,r:62,ph:.02,th:Math.PI/2},side:{t:GC,r:56,ph:Math.PI/2-.02,th:Math.PI/2}};
-let auto=!reduce,choreo=true,camK=1.6;
+const cam={t:GC.clone(),r:56,th:2.0,ph:1.08},goal={t:GC.clone(),r:56,th:2.0,ph:1.08};
+const VIEWS={all:{t:GC,r:56,ph:1.08,auto:1},open:{t:SUN,r:6.5,ph:1.05,auto:1},glob:{t:GC,r:50,ph:1.45,th:Math.PI-.4},
+  side:{t:GC,r:50,ph:Math.PI/2-.04,th:-Math.PI/2},top:{t:GC,r:58,ph:.02,th:-Math.PI/2}};
+let auto=!reduce,camK=3;
 const setView=k=>{const v=VIEWS[k];goal.t.copy(v.t);goal.r=v.r*fit;goal.ph=v.ph;
   if(v.th!=null){let d=(v.th-cam.th)%(2*Math.PI);if(d>Math.PI)d-=2*Math.PI;if(d<-Math.PI)d+=2*Math.PI;goal.th=cam.th+d}
-  camK=3;choreo=false;auto=!reduce&&(k==='all'||k==='sun');
-  document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===k))};
-const freeView=()=>{auto=false;choreo=false;camK=7;document.querySelectorAll('#views button').forEach(b=>b.classList.remove('on'))};
-$('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setView(b.dataset.v)});
+  camK=2.4;auto=!reduce&&!!v.auto};
+const freeView=()=>{auto=false;camK=7};
 
 /* ---------- 조작 ---------- */
-const S={open:true,glob:true,disk:true,line:true,hover:null,sel:null};
-const tog=(id,key)=>{$(id).onclick=()=>{S[key]=!S[key];$(id).setAttribute('aria-pressed',S[key]);
-  if(S.sel&&!S[S.sel.kind])S.sel=null;showCard()}};
-tog('#tOpen','open');tog('#tGlob','glob');tog('#tDisk','disk');tog('#tLine','line');
+const S={mode:null,sub:'side',hover:null,sel:null};
+const tabs=$('#tabs'),storyEl=$('#story');let invited=false;
+function setMode(m){S.mode=m;S.sub='side';invited=true;tabs.classList.remove('invite');
+  tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));
+  storyEl.classList.toggle('show',!!m);if(m)storyEl.querySelectorAll('[data-s]').forEach(d=>d.hidden=d.dataset.s!==m);
+  document.querySelectorAll('#sub button').forEach(b=>b.classList.toggle('on',b.dataset.sub==='side'));
+  if(S.sel&&(m==='open'||m==='glob')&&S.sel.kind!==m)S.sel=null;showCard();
+  setView(m==='struct'?'side':m||'all')}
+tabs.addEventListener('click',e=>{const b=e.target.closest('button');if(b)setMode(S.mode===b.dataset.m?null:b.dataset.m)});
+$('#sub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.sub=b.dataset.sub;
+  document.querySelectorAll('#sub button').forEach(x=>x.classList.toggle('on',x===b));setView(S.sub)});
 
 const ptr=new Map();let moved=0,pinch=0;
 const pick=(x,y,rad)=>{let best=null,bd=rad*rad;for(const c of CL){if(c.a<.5)continue;const dx=c.sx-x,dy=c.sy-y,d=dx*dx+dy*dy;if(d<bd){bd=d;best=c}}return best};
@@ -285,20 +323,17 @@ function showCard(){const c=S.hover||S.sel;$('#card').classList.toggle('show',!!
   $('#cMeta').textContent=`l ${c.l.toFixed(1)}° · b ${c.b>0?'+':''}${c.b.toFixed(1)}° · 은하 중심에서 ${c.rgc.toFixed(1)} kpc`}
 
 let T=reduce?T_END+3:0;
-$('#replay').onclick=()=>{T=0;S.sel=S.hover=null;showCard();diskSm=0;lineSm=1;
-  cam.t.copy(SUN);cam.r=4;cam.ph=1.05;goal.t.copy(SUN);goal.r=4;goal.ph=1.05;goal.th=cam.th;choreo=true;auto=!reduce;camK=1.6;
-  document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v==='all'));
-  if(reduce){T=T_END+3;setView('all')}};
+$('#replay').onclick=()=>{S.sel=S.hover=null;setMode(null);if(reduce)return;T=0;diskSm=0;lineSm=1;invited=false};
 
 /* ---------- 프레임 ---------- */
 function resize(){W=cv.clientWidth;H=cv.clientHeight;DPR=Math.min(devicePixelRatio||1,2);renderer.setPixelRatio(DPR);renderer.setSize(W,H,false);
   camera.aspect=W/H;camera.updateProjectionMatrix();diskMat.uniforms.uScale.value=H*DPR/TAN;diskMat.uniforms.uMax.value=9*DPR;fit=Math.max(1,.8*H/W);measure()}
 addEventListener('resize',resize);resize();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(measure);
-if(reduce)setView('all');
+setView('all');cam.r=goal.r;
 
 const ease=x=>x<0?0:x>1?1:1-Math.pow(1-x,3),sm=(a,b,x)=>{x=Math.min(1,Math.max(0,(x-a)/(b-a)));return x*x*(3-2*x)};
-const v=new V3(),placed=[];let diskSm=0,lineSm=1,hiSm=0,last=performance.now();
+const v=new V3(),placed=[];let diskSm=0,lineSm=1,hiSm=0,structSm=0,last=performance.now();
 const selEl=$('#sel');
 
 function frame(now){
@@ -308,10 +343,12 @@ function frame(now){
   // 성단: 태양에서 측정한 거리만큼 뻗어 나간다
   let reach=0;const sp=sightG.attributes.position.array,sc=sightG.attributes.color.array,dp=dropG.attributes.position.array,dc=dropG.attributes.color.array;
   const intro=T<T_END;
-  lineSm+=((S.line?(intro?.42:.11):0)-lineSm)*k(intro?6:1.5);
+  lineSm+=((intro?.42:S.mode==='struct'?.03:.11)-lineSm)*k(intro?6:1.5);
+  if(!invited&&T>T_END+.5){invited=true;tabs.classList.add('invite')}
+  structSm+=((S.mode==='struct'?1:0)-structSm)*k(4);dimMat.opacity=structSm*.75;
   const act=S.hover||S.sel;
   CL.forEach((c,i)=>{
-    c.p=ease((T-c.t0)/1.3);c.vis+=((S[c.kind]?1:0)-c.vis)*k(7);
+    c.p=ease((T-c.t0)/1.3);c.vis+=(((S.mode==='open'||S.mode==='glob')&&S.mode!==c.kind?.12:1)-c.vis)*k(5);
     c.cur.copy(SUN).lerp(c.pos,c.p);c.a=Math.min(1,c.p*5)*c.vis;
     if(c.p>0)reach=Math.max(reach,c.d*c.p);
     const pulse=c.p<1&&c.p>0?1.5:1,px=c.sp.userData.px*(c===act?1.6:pulse)*TAN/H;
@@ -327,12 +364,11 @@ function frame(now){
   if(act){const h=hiG.attributes.position.array;h[3]=act.cur.x;h[4]=act.cur.y;h[5]=act.cur.z;hiG.attributes.position.needsUpdate=true;hiL.material.color.copy(COL[act.kind])}
   hiL.material.opacity=hiSm*.9;
 
-  diskSm+=((S.disk&&T>T_END-1.6?1:0)-diskSm)*k(1.1);diskMat.uniforms.uOp.value=diskSm*.3;
+  diskSm+=((T>T_END-1.6?1:0)-diskSm)*k(1.1);diskMat.uniforms.uOp.value=diskSm*.3;
   sunS.scale.setScalar(sunS.userData.px*TAN/H);gcS.scale.setScalar(gcS.userData.px*TAN/H);gcS.material.opacity=.9-diskSm*.6;
 
   // 카메라
-  if(choreo){goal.r=Math.min(56,Math.max(4,reach*2.7))*fit;goal.t.copy(SUN).lerp(GC,sm(1.5,13,reach));goal.ph=1.05+.03*sm(1.5,13,reach)}
-  if(auto&&!ptr.size)goal.th+=dt*(choreo&&intro?.11:.035);
+  if(auto&&!ptr.size)goal.th+=dt*.035;
   const kc=k(camK);cam.t.lerp(goal.t,kc);cam.r+=(goal.r-cam.r)*kc;cam.th+=(goal.th-cam.th)*kc;cam.ph+=(goal.ph-cam.ph)*kc;
   const s=Math.sin(cam.ph);
   camera.position.set(cam.t.x+cam.r*s*Math.cos(cam.th),cam.t.y+cam.r*Math.cos(cam.ph),cam.t.z+cam.r*s*Math.sin(cam.th));
@@ -343,8 +379,9 @@ function frame(now){
   placed.length=0;
   const place=L=>{v.copy(L.pos).project(camera);const x=(v.x*.5+.5)*W,y=(-v.y*.5+.5)*H;if(L.c){L.c.sx=x;L.c.sy=y}
     let show=L.ok()&&v.z<1&&x>-20&&x<W&&y>0&&y<H;
-    if(show){const a=x+L.dx-3,b=y-9,c=a+L.w+6,d=y+9;for(const r of placed)if(a<r[2]&&c>r[0]&&b<r[3]&&d>r[1]){show=false;break}if(show)placed.push([a,b,c,d])}
-    L.el.style.transform=`translate3d(${(x+L.dx).toFixed(1)}px,${y.toFixed(1)}px,0) translateY(-50%)`;
+    const ox=L.cx?-L.w/2:L.dx,oy=L.cx?13:0;
+    if(show){const a=x+ox-3,b=y+oy-9,c=a+L.w+6,d=y+oy+9;for(const r of placed)if(a<r[2]&&c>r[0]&&b<r[3]&&d>r[1]){show=false;break}if(show)placed.push([a,b,c,d])}
+    L.el.style.transform=`translate3d(${(x+ox).toFixed(1)}px,${(y+oy).toFixed(1)}px,0) translateY(-50%)`;
     if(show!==L.on){L.on=show;L.el.classList.toggle('show',show)}
     const isAct=!!L.c&&L.c===act;if(isAct!==L.act){L.act=isAct;L.el.classList.toggle('act',isAct)}};
   if(act)place(act.lb);
