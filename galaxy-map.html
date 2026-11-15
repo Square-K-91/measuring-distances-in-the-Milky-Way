@@ -1,4 +1,4 @@
-<title>우리은하 성단 지도</title>
+<title>우리은하의 구조</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -9,7 +9,7 @@
   --bg:#05060a; --panel:rgba(13,16,24,.86); --panel-2:#121723;
   --line:#232a3a;
   --fg:#e9ebf1; --muted:#8e94a6; --dim:#5b6276;
-  --warm:#ffb866; --cool:#8db8ff;
+  --warm:#ffb866; --cool:#8db8ff; --halo:#b3a6ff;
   --f-display:"Space Grotesk","IBM Plex Sans KR",system-ui,sans-serif;
   --f-body:"IBM Plex Sans KR",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
@@ -36,7 +36,7 @@ body{font-family:var(--f-body);font-size:14px;line-height:1.5}
 .ui button{pointer-events:auto!important}
 header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
 h1{font-family:var(--f-display);font-weight:600;font-size:20px;letter-spacing:-.01em;margin:0}
-.sub{font-size:12.5px;color:var(--muted)}
+.sub{display:block;font-size:12.5px;color:var(--muted);max-width:30em;text-wrap:balance;word-break:keep-all}
 .toggles{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .tg{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;
   border:1px solid var(--line);background:var(--panel);font-size:12.5px;color:var(--fg);transition:color .2s,opacity .2s;backdrop-filter:blur(6px)}
@@ -58,6 +58,7 @@ h1{font-family:var(--f-display);font-weight:600;font-size:20px;letter-spacing:-.
 .story h2{font-family:var(--f-display);font-size:15px;font-weight:600;margin:0}
 .story ul{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:3px}
 .lb.st{font-family:var(--f-display);font-size:13px;color:var(--fg)}
+.lb.halo{color:var(--halo)}
 .lb.dim{font-family:var(--f-mono);font-size:12px;color:var(--fg)}
 .bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;
@@ -78,7 +79,7 @@ h1{font-family:var(--f-display);font-weight:600;font-size:20px;letter-spacing:-.
 .btn:hover{border-color:var(--dim)}
 button:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
 #err{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);padding:24px;text-align:center}
-@media (max-width:560px){h1{font-size:17px}.sub{display:none}.story{width:100%}.story ul{font-size:12.5px}}
+@media (max-width:560px){h1{font-size:17px}.sub{font-size:12px}.story{width:100%}.story ul{font-size:12.5px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.toggles.invite .tg{border-color:var(--glow)}}
 </style>
 
@@ -91,8 +92,8 @@ button:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
   <div class="top">
     <header>
       <div>
-        <h1>우리은하 성단 지도</h1>
-        <span class="sub">태양에서 잰 성단까지의 거리</span>
+        <h1>우리은하의 구조</h1>
+        <span class="sub">산개 성단과 구상 성단까지의 거리를 재어 우리은하의 크기와 모양을 알아봐요.</span>
       </div>
       <div class="toggles" id="tabs">
         <button class="tg open" data-m="open" aria-pressed="false"><i></i>산개 성단 <small>주계열 맞추기</small></button>
@@ -249,10 +250,17 @@ const sightG=mkLines(),dropG=mkLines();
 const hiG=new THREE.BufferGeometry().setFromPoints([SUN,SUN]);
 const hiL=new THREE.Line(hiG,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthTest:false,depthWrite:false}));
 hiL.frustumCulled=false;hiL.renderOrder=2;scene.add(hiL);
+// 헤일로: 은하 중심을 둘러싼 옅은 공
+const halo=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,255,255,.5)');g.addColorStop(.45,'rgba(255,255,255,.3)');g.addColorStop(.8,'rgba(255,255,255,.1)');g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,128,128);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),color:0x8f7dff,transparent:true,opacity:0,depthTest:false,depthWrite:false,blending:THREE.AdditiveBlending}));
+  sp.scale.setScalar(48);sp.renderOrder=0;scene.add(sp);return sp})();
 // 구조 보기의 치수선 (지름 30 kpc, 태양–중심 8.5 kpc)
 const dimMat=new THREE.LineBasicMaterial({color:0xe9ebf1,transparent:true,opacity:0,depthTest:false,depthWrite:false});
 {const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([-15,-5.5,0,15,-5.5,0,-15,-6,0,-15,-5,0,15,-6,0,15,-5,0,
-  -R0,-3,0,0,-3,0,-R0,-3.4,0,-R0,0,0,0,-3.4,0,0,0,0],3));const l=new THREE.LineSegments(g,dimMat);l.renderOrder=2;scene.add(l)}
+  -R0,-3,0,0,-3,0,-R0,-3.4,0,-R0,0,0,0,-3.4,0,0,0,0,
+  2.2,3.6,0,.4,.9,0,.4,.9,0,.941,1.26,0,.4,.9,0,.525,1.538,0],3));const l=new THREE.LineSegments(g,dimMat);l.renderOrder=2;scene.add(l)}
 
 /* ---------- 라벨 ---------- */
 const LB=[],box=$('#labels');
@@ -263,9 +271,9 @@ mkLabel('은하 중심','mark',GC,{rank:0,ok:()=>S.mode!=='struct'});
 for(const c of CL)c.lb=mkLabel(c.name,c.kind+' p'+c.pri,c.cur,{rank:c.pri,ok:()=>c.a>.5&&(S.mode!=='struct'||c===(S.hover||S.sel)),c});
 mkLabel(R0+' kpc','ring',new V3(-R0/2,0,0),{rank:4,dx:6,ok:()=>S.mode!=='struct'});
 {const st=()=>S.mode==='struct',side=()=>st()&&S.sub==='side',top=()=>st()&&S.sub==='top';
- mkLabel('팽대부','st',new V3(.9,1.9,0),{rank:0,ok:st});
+ mkLabel('팽대부','st',new V3(2.3,3.8,0),{rank:0,cx:true,oy:-11,ok:st});
  mkLabel('은하 원반','st',new V3(10.5,1.3,0),{rank:0,ok:st});
- mkLabel('헤일로','st',new V3(5,9,0),{rank:0,ok:side});
+ mkLabel('헤일로','st halo',new V3(7,12,0),{rank:0,ok:side});
  mkLabel('구상 성단','st',CL.find(c=>c.name==='M3').cur,{rank:0,dx:13,ok:side});
  mkLabel('나선팔','st',new V3(8.45,.2,7.06),{rank:0,ok:top});
  mkLabel('30 kpc','dim',new V3(9,-5.5,0),{rank:0,cx:true,ok:st});
@@ -278,11 +286,12 @@ const measure=()=>{for(const L of LB)L.w=L.el.offsetWidth};
 const cam={t:GC.clone(),r:56,th:2.0,ph:1.08},goal={t:GC.clone(),r:56,th:2.0,ph:1.08};
 const VIEWS={all:{t:GC,r:56,ph:1.08,auto:1},open:{t:SUN,r:6.5,ph:1.05,auto:1},glob:{t:GC,r:50,ph:1.45,th:Math.PI-.4},
   side:{t:GC,r:50,ph:Math.PI/2-.04,th:-Math.PI/2},top:{t:GC,r:58,ph:.02,th:-Math.PI/2}};
-let auto=!reduce,camK=3;
+let auto=!reduce,camK=3,choreo=false;
+const startChoreo=()=>{choreo=true;camK=1.6;auto=true;cam.t.copy(SUN);cam.r=4;cam.ph=1.05;goal.t.copy(SUN);goal.r=4;goal.ph=1.05;goal.th=cam.th};
 const setView=k=>{const v=VIEWS[k];goal.t.copy(v.t);goal.r=v.r*fit;goal.ph=v.ph;
   if(v.th!=null){let d=(v.th-cam.th)%(2*Math.PI);if(d>Math.PI)d-=2*Math.PI;if(d<-Math.PI)d+=2*Math.PI;goal.th=cam.th+d}
-  camK=2.4;auto=!reduce&&!!v.auto};
-const freeView=()=>{auto=false;camK=7};
+  camK=2.4;choreo=false;auto=!reduce&&!!v.auto};
+const freeView=()=>{auto=false;choreo=false;camK=7};
 
 /* ---------- 조작 ---------- */
 const S={mode:null,sub:'side',hover:null,sel:null};
@@ -323,14 +332,14 @@ function showCard(){const c=S.hover||S.sel;$('#card').classList.toggle('show',!!
   $('#cMeta').textContent=`l ${c.l.toFixed(1)}° · b ${c.b>0?'+':''}${c.b.toFixed(1)}° · 은하 중심에서 ${c.rgc.toFixed(1)} kpc`}
 
 let T=reduce?T_END+3:0;
-$('#replay').onclick=()=>{S.sel=S.hover=null;setMode(null);if(reduce)return;T=0;diskSm=0;lineSm=1;invited=false};
+$('#replay').onclick=()=>{S.sel=S.hover=null;setMode(null);if(reduce)return;T=0;diskSm=0;lineSm=1;invited=false;startChoreo()};
 
 /* ---------- 프레임 ---------- */
 function resize(){W=cv.clientWidth;H=cv.clientHeight;DPR=Math.min(devicePixelRatio||1,2);renderer.setPixelRatio(DPR);renderer.setSize(W,H,false);
   camera.aspect=W/H;camera.updateProjectionMatrix();diskMat.uniforms.uScale.value=H*DPR/TAN;diskMat.uniforms.uMax.value=9*DPR;fit=Math.max(1,.8*H/W);measure()}
 addEventListener('resize',resize);resize();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(measure);
-setView('all');cam.r=goal.r;
+setView('all');cam.r=goal.r;if(!reduce)startChoreo();
 
 const ease=x=>x<0?0:x>1?1:1-Math.pow(1-x,3),sm=(a,b,x)=>{x=Math.min(1,Math.max(0,(x-a)/(b-a)));return x*x*(3-2*x)};
 const v=new V3(),placed=[];let diskSm=0,lineSm=1,hiSm=0,structSm=0,last=performance.now();
@@ -345,7 +354,7 @@ function frame(now){
   const intro=T<T_END;
   lineSm+=((intro?.42:S.mode==='struct'?.03:.11)-lineSm)*k(intro?6:1.5);
   if(!invited&&T>T_END+.5){invited=true;tabs.classList.add('invite')}
-  structSm+=((S.mode==='struct'?1:0)-structSm)*k(4);dimMat.opacity=structSm*.75;
+  structSm+=((S.mode==='struct'?1:0)-structSm)*k(4);dimMat.opacity=structSm*.75;halo.material.opacity=structSm*.4;
   const act=S.hover||S.sel;
   CL.forEach((c,i)=>{
     c.p=ease((T-c.t0)/1.3);c.vis+=(((S.mode==='open'||S.mode==='glob')&&S.mode!==c.kind?.12:1)-c.vis)*k(5);
@@ -368,7 +377,8 @@ function frame(now){
   sunS.scale.setScalar(sunS.userData.px*TAN/H);gcS.scale.setScalar(gcS.userData.px*TAN/H);gcS.material.opacity=.9-diskSm*.6;
 
   // 카메라
-  if(auto&&!ptr.size)goal.th+=dt*.035;
+  if(choreo){if(!intro)setView('all');else{const w=sm(1.5,13,reach);goal.r=Math.min(56,Math.max(4,reach*2.7))*(1+(fit-1)*w);goal.t.copy(SUN).lerp(GC,w);goal.ph=1.05+.03*w}}
+  if(auto&&!ptr.size)goal.th+=dt*(choreo?.11:.035);
   const kc=k(camK);cam.t.lerp(goal.t,kc);cam.r+=(goal.r-cam.r)*kc;cam.th+=(goal.th-cam.th)*kc;cam.ph+=(goal.ph-cam.ph)*kc;
   const s=Math.sin(cam.ph);
   camera.position.set(cam.t.x+cam.r*s*Math.cos(cam.th),cam.t.y+cam.r*Math.cos(cam.ph),cam.t.z+cam.r*s*Math.sin(cam.th));
@@ -379,7 +389,7 @@ function frame(now){
   placed.length=0;
   const place=L=>{v.copy(L.pos).project(camera);const x=(v.x*.5+.5)*W,y=(-v.y*.5+.5)*H;if(L.c){L.c.sx=x;L.c.sy=y}
     let show=L.ok()&&v.z<1&&x>-20&&x<W&&y>0&&y<H;
-    const ox=L.cx?-L.w/2:L.dx,oy=L.cx?13:0;
+    const ox=L.cx?-L.w/2:L.dx,oy=L.cx?(L.oy||13):0;
     if(show){const a=x+ox-3,b=y+oy-9,c=a+L.w+6,d=y+oy+9;for(const r of placed)if(a<r[2]&&c>r[0]&&b<r[3]&&d>r[1]){show=false;break}if(show)placed.push([a,b,c,d])}
     L.el.style.transform=`translate3d(${(x+ox).toFixed(1)}px,${(y+oy).toFixed(1)}px,0) translateY(-50%)`;
     if(show!==L.on){L.on=show;L.el.classList.toggle('show',show)}
